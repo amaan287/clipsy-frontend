@@ -1,0 +1,76 @@
+{
+  "expo": {
+    "name": "clipsy",
+    "slug": "clipsy",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "clipsy",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.amaan287.clipsy"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "package": "com.amaan287.clipsy"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+     
+    [
+  "expo-font",
+  {
+    "android": {
+      "fonts": [
+        {
+          "fontFamily": "SpaceMono",
+          "fontDefinitions": [
+            {
+              "path": "./assets/fonts/SpaceMono-Regular.ttf",
+              "weight": 400
+            }
+          ]
+        }
+      ]
+    },
+    "ios": {
+      "fonts": [
+        "./assets/fonts/SpaceMono-Regular.ttf"
+      ]
+    }
+  }
+],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0659154c-a00c-4e3d-9af6-17d9363030bb"
+      }
+    },
+    "owner": "amaan287"
+  }
+}
