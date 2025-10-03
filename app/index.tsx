@@ -31,42 +31,58 @@ export default function Index() {
     Poppins_700Bold,
   });
 useEffect(() => {
-      ShareHandler; // This initializes the singleton
-
-})
-  useEffect(() => {
-     const fetchRecipes = async () => {
-    if (!user.user?.id) {
-      console.warn("User ID not found, skipping recipe fetch");
-      return
-    };
-    
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await axios.get(
-        `${BACKEND_URL}/recipes/user/${user.user.id}`,{
-          headers: {
-            Authorization: `Bearer ${user.accessToken}`,
-          },
-        }
-      );
-      if (response.data.success) {
-        setRecipes(response.data.recipe_data.recipes);
-      } else {
-        setError(response.data.error || "Failed to fetch recipes");
-      }
-    } catch (err) {
-      setError("Error fetching recipes");
-      console.error("Error fetching recipes:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-    if (user.isAuthenticated) {
+  // Initialize ShareHandler when component mounts
+  ShareHandler.initialize(); // Reinitialize to ensure listener is active
+  
+  const handleRecipeExtracted = () => {
+    // Refresh recipes when a new one is added via sharing
+    if (user.isAuthenticated && user.user?.id) {
       fetchRecipes();
     }
-  }, [user]);
+  };
+
+  // Clean up when component unmounts
+  return () => {
+    ShareHandler.cleanup();
+  };
+}, []);
+
+// Move fetchRecipes outside of useEffect so it can be called from multiple places
+const fetchRecipes = async () => {
+  if (!user.user?.id) {
+    console.warn("User ID not found, skipping recipe fetch");
+    return;
+  }
+  
+  setLoading(true);
+  setError(null);
+  try {
+    const response = await axios.get(
+      `${BACKEND_URL}/recipes/user/${user.user.id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${user.accessToken}`,
+        },
+      }
+    );
+    if (response.data.success) {
+      setRecipes(response.data.recipe_data.recipes);
+    } else {
+      setError(response.data.error || "Failed to fetch recipes");
+    }
+  } catch (err) {
+    setError("Error fetching recipes");
+    console.error("Error fetching recipes:", err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (user.isAuthenticated) {
+    fetchRecipes();
+  }
+}, [user]);
 
  
 

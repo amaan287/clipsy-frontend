@@ -10,7 +10,17 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.amaan287.clipsy"
+      "bundleIdentifier": "com.amaan287.clipsy",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLName": "clipsy-share",
+            "CFBundleURLSchemes": [
+              "clipsy"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +28,37 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.amaan287.clipsy"
+      "package": "com.amaan287.clipsy",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ],
+          "data": {
+            "scheme": "clipsy"
+          }
+        },
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": {
+            "mimeType": "text/plain"
+          }
+        },
+        {
+          "action": "SEND",
+          "category": [
+            "DEFAULT"
+          ],
+          "data": {
+            "mimeType": "text/*"
+          }
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -36,30 +76,29 @@
           "backgroundColor": "#ffffff"
         }
       ],
-     
-    [
-  "expo-font",
-  {
-    "android": {
-      "fonts": [
+      [
+        "expo-font",
         {
-          "fontFamily": "SpaceMono",
-          "fontDefinitions": [
-            {
-              "path": "./assets/fonts/SpaceMono-Regular.ttf",
-              "weight": 400
-            }
-          ]
+          "android": {
+            "fonts": [
+              {
+                "fontFamily": "SpaceMono",
+                "fontDefinitions": [
+                  {
+                    "path": "./assets/fonts/SpaceMono-Regular.ttf",
+                    "weight": 400
+                  }
+                ]
+              }
+            ]
+          },
+          "ios": {
+            "fonts": [
+              "./assets/fonts/SpaceMono-Regular.ttf"
+            ]
+          }
         }
-      ]
-    },
-    "ios": {
-      "fonts": [
-        "./assets/fonts/SpaceMono-Regular.ttf"
-      ]
-    }
-  }
-],
+      ],
       "expo-web-browser"
     ],
     "experiments": {
@@ -68,7 +107,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0659154c-a00c-4e3d-9af6-17d9363030bb"
+        "projectId": "ac8a60a2-4dcf-437b-a9ed-bfbe4b4a7cc4"
       }
     },
     "owner": "amaan287"

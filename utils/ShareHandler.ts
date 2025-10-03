@@ -1,175 +1,170 @@
-// ShareHandler.js
-import * as Linking from 'expo-linking';
-import { Alert, AppState } from 'react-native';
+import { Linking, Alert } from 'react-native';
+import axios from 'axios';
+import { store } from '@/store';
 
 class ShareHandler {
-  constructor() {
-    this.setupLinkingListener();
-    this.setupAppStateListener();
+  private static instance: ShareHandler;
+  private linkingSubscription: any;
+
+  private constructor() {}
+
+  static getInstance(): ShareHandler {
+    if (!ShareHandler.instance) {
+      ShareHandler.instance = new ShareHandler();
+    }
+    return ShareHandler.instance;
   }
 
-  setupLinkingListener() {
-    // Handle links when app is launched
+  static initialize() {
+    const instance = ShareHandler.getInstance();
+    instance.setupListeners();
+  }
+
+  static cleanup() {
+    const instance = ShareHandler.getInstance();
+    instance.removeListeners();
+  }
+
+  private setupListeners() {
+    // Remove any existing subscription
+    this.removeListeners();
+
+    // Set up deep link listener for when app is already open
+    this.linkingSubscription = Linking.addEventListener('url', this.handleIncomingURL);
+
+    // Handle initial URL if app was opened via share
     Linking.getInitialURL().then(url => {
       if (url) {
-        console.log('Initial URL:', url);
-        this.handleIncomingURL(url);
+        console.log('🚀 ShareHandler: Initial URL detected:', url);
+        this.handleIncomingURL({ url });
       }
     });
 
-    // Handle links when app is running
-    const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.log('Received URL:', url);
-      this.handleIncomingURL(url);
-    });
-
-    return subscription;
+    console.log('✅ ShareHandler: Listeners set up successfully');
   }
 
-  setupAppStateListener() {
-    // Handle app state changes to catch shared content
-    AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
-        // Check for shared content when app becomes active
-        this.checkForSharedContent();
-      }
-    });
-  }
-
-  async checkForSharedContent() {
-    // This is a workaround for Expo - check if there's shared data
-    // You might need to use native modules for full share intent handling
-    try {
-      const initialURL = await Linking.getInitialURL();
-      if (initialURL && this.isValidReelOrShortUrl(initialURL)) {
-        this.handleSharedContent(initialURL);
-      }
-    } catch (error) {
-      console.log('No shared content found');
+  private removeListeners() {
+    if (this.linkingSubscription) {
+      this.linkingSubscription.remove();
+      this.linkingSubscription = null;
     }
   }
 
-  handleIncomingURL(url) {
-    if (url.startsWith('clipsy://')) {
-      // Handle your app's custom scheme
-      this.parseCustomURL(url);
-    } else if (this.isValidReelOrShortUrl(url)) {
-      // Handle shared social media URLs
-      this.handleSharedContent(url);
-    }
-  }
-
-  parseCustomURL(url) {
-    // Parse custom URL scheme: clipsy://share?url=ENCODED_URL
+  private handleIncomingURL = async (event: { url: string }) => {
+    console.log('📱 ShareHandler: Received URL:', event.url);
+    
     try {
-      const parsed = Linking.parse(url);
-      if (parsed.path === 'share' && parsed.queryParams?.url) {
-        const sharedUrl = decodeURIComponent(parsed.queryParams.url);
-        if (this.isValidReelOrShortUrl(sharedUrl)) {
-          this.handleSharedContent(sharedUrl);
+      // Check if it's a share intent
+      if (event.url.includes('text=')) {
+        // Decode the URL to get the shared text
+        const decodedUrl = decodeURIComponent(event.url);
+        const textMatch = decodedUrl.match(/text=(.+)/);
+        
+        if (textMatch && textMatch[1]) {
+          const sharedText = textMatch[1];
+          console.log('📝 ShareHandler: Extracted text:', sharedText);
+          
+          // Check if the shared text contains an Instagram URL
+          const instagramUrlMatch = sharedText.match(/https?:\/\/(www\.)?instagram\.com\/[^\s]+/);
+          
+          if (instagramUrlMatch) {
+            const instagramUrl = instagramUrlMatch[0];
+            console.log('📸 ShareHandler: Found Instagram URL:', instagramUrl);
+            
+            // Send to backend
+            await this.sendToBackend(instagramUrl);
+          } else {
+            console.log('⚠️ ShareHandler: No Instagram URL found in shared text');
+          }
         }
       }
     } catch (error) {
-      console.error('Error parsing custom URL:', error);
+      console.error('❌ ShareHandler: Error processing URL:', error);
     }
-  }
+  };
 
-  async handleSharedContent(url) {
-    console.log('Processing shared content:', url);
-    
+  private async sendToBackend(url: string) {
     try {
-      // Show loading indicator
-      Alert.alert('Processing', 'Extracting content from shared link...');
-      
-      await this.sendToBackend(url);
-      
-    } catch (error) {
-      console.error('Error handling shared content:', error);
-      Alert.alert('Error', 'Failed to process shared content');
-    }
-  }
+      // Get current state from Redux store
+      const state = store.getState();
+      const { accessToken, isAuthenticated } = state.user;
 
-  extractUrlFromText(text) {
-    // Regex to extract URLs from text
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const matches = text.match(urlRegex);
-    return matches ? matches[0] : null;
-  }
-
-  isValidReelOrShortUrl(url) {
-    if (!url) return false;
-    
-    const validPatterns = [
-      'instagram.com/reel',
-      'instagram.com/p/',
-      'instagram.com/tv/',
-      'youtube.com/shorts',
-      'youtu.be/',
-      'youtube.com/watch',
-      'tiktok.com/',
-      'vm.tiktok.com/',
-      'twitter.com/',
-      'x.com/'
-    ];
-
-    return validPatterns.some(pattern => url.includes(pattern));
-  }
-
-  async sendToBackend(url) {
-    try {
-      const response = await fetch('https://yourapi.com/api/extract', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Add your auth headers if needed
-          // 'Authorization': 'Bearer your-token'
-        },
-        body: JSON.stringify({ 
-          url,
-          timestamp: new Date().toISOString(),
-          source: 'mobile_share'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!isAuthenticated || !accessToken) {
+        Alert.alert(
+          'Authentication Required',
+          'Please log in to save recipes from Instagram',
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
-      const result = await response.json();
-      console.log('Backend response:', result);
-      
-      // Handle success
-      Alert.alert(
-        'Success!', 
-        'Content extracted successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              // Navigate to results screen or update app state
-              // NavigationService.navigate('ProcessedContent', { data: result });
-            }
-          }
-        ]
-      );
-      
-      return result;
-      
-    } catch (error) {
-      console.error('Error sending to backend:', error);
-      Alert.alert(
-        'Error', 
-        'Failed to extract content. Please try again.',
-        [{ text: 'OK' }]
-      );
-      throw error;
-    }
-  }
+      const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+      if (!BACKEND_URL) {
+        console.error('❌ ShareHandler: Backend URL not configured');
+        Alert.alert('Error', 'Backend URL not configured');
+        return;
+      }
 
-  // Method to manually test the share functionality
-  testShare(testUrl = 'https://www.instagram.com/reel/test123/') {
-    this.handleSharedContent(testUrl);
+      console.log('🚀 ShareHandler: Sending to backend:', {
+        url: `${BACKEND_URL}/extract-recipe`,
+        body: { url }
+      });
+
+      const response = await axios.post(
+        `${BACKEND_URL}/extract-recipe`,
+        { url },
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log('✅ ShareHandler: Backend response:', response.data);
+
+      if (response.data.success) {
+        Alert.alert(
+          'Success',
+          'Recipe extracted successfully!',
+          [{ text: 'OK' }]
+        );
+        
+        // Emit event or trigger refresh in the app
+        // You can use EventEmitter or a callback here
+      } else {
+        Alert.alert(
+          'Error',
+          response.data.message || 'Failed to extract recipe',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('❌ ShareHandler: Error sending to backend:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          Alert.alert(
+            'Authentication Error',
+            'Your session has expired. Please log in again.',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Error',
+            error.response?.data?.message || 'Failed to extract recipe. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      } else {
+        Alert.alert(
+          'Error',
+          'An unexpected error occurred. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
   }
 }
 
-export default new ShareHandler();
+export default ShareHandler;

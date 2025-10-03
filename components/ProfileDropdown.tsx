@@ -40,10 +40,8 @@ const dispatch = useDispatch();
       case "Logout":
         dispatch(logout());
         GoogleSignin.signOut();
-        AsyncStorage.removeItem("refreshToken"); // Clear stored token
+        // Redux persist will automatically clear the stored token
         navigate('/app');
-
-        // Handle logout logic
         break;
       default:
         break;

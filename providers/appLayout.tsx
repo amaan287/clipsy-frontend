@@ -1,10 +1,10 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import { View } from "react-native";
 import { usePathname } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
-import { useDispatch } from "react-redux";
-import { setUser } from "@/store/slices/userSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { setUser, updateTokens, logout } from "@/store/slices/userSlice";
+import { UserState } from "@/types/userstate";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL
 
@@ -15,40 +15,47 @@ interface AppLayoutProps {
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const dispatch = useDispatch();
-  const [isLoading, setIsLoading] = useState(true);
+  const user = useSelector((state: { user: UserState }) => state.user);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
-    const refreshToken = async () => {
+    const refreshTokenIfNeeded = async () => {
       try {
-        const token = await AsyncStorage.getItem("refreshToken");
-        if (!token) {
-          setIsLoading(false);
-          return;
+        // Only try to refresh if we have a refresh token but are not authenticated
+        // This handles the case where the app was closed and reopened
+        if (user.refreshToken && !user.isAuthenticated) {
+          console.log("🔄 Attempting to refresh token...");
+          
+          const response = await axios.post(
+            `${BACKEND_URL}/auth/refresh?refreshToken=${user.refreshToken}`,
+          );
+
+          if (response.data.data) {
+            // Update the tokens and user data
+            dispatch(
+              setUser({
+                accessToken: response.data.data.accessToken,
+                refreshToken: response.data.data.refreshToken,
+                user: response.data.data.user_data,
+              })
+            );
+            console.log("✅ Token refreshed successfully");
+          }
         }
-
-        const response = await axios.post(
-          `${BACKEND_URL}/auth/refresh?refreshToken=${token}`,
-        );
-
-        await AsyncStorage.setItem("refreshToken", response.data.data.refreshToken);
-        
-        dispatch(
-          setUser({
-            accessToken: response.data.data.accessToken,
-            refreshToken: response.data.data.refreshToken,
-            user: response.data.data.user_data,
-          })
-        );
       } catch (error) {
-        console.error("Refresh token error:", error);
-        await AsyncStorage.removeItem("refreshToken");
+        console.error("❌ Refresh token error:", error);
+        // If refresh fails, clear the user state
+        dispatch(logout());
       } finally {
-        setIsLoading(false);
+        setIsInitialLoad(false);
       }
     };
 
-    refreshToken();
-  }, [dispatch]);
+    // Only run on initial app load
+    if (isInitialLoad) {
+      refreshTokenIfNeeded();
+    }
+  }, [user.refreshToken, user.isAuthenticated, dispatch, isInitialLoad]);
 
   return <View style={{ flex: 1 }}>{children}</View>;
 }

@@ -45,6 +45,9 @@ export default function App(): JSX.Element {
         const { name, email, photo } = response.data.user;
 
         // Add timeout and better error handling for the axios request
+        console.warn("email",email);
+        console.warn("name",name);
+        console.warn("photo",photo);
         const res = await axios.post(
           `${BACKEND_URL}/auth/login`,
           {
@@ -55,7 +58,7 @@ export default function App(): JSX.Element {
         );
         
         console.warn("backend data",res.data);
-        await AsyncStorage.setItem("refreshToken", res.data.refresh_token);
+        // Redux persist will automatically save this to AsyncStorage
         dispatch(
           setUser({
               accessToken: res.data.access_token,
@@ -68,6 +71,7 @@ export default function App(): JSX.Element {
         console.warn("Google signin was failed");
       }
     } catch (error: unknown) {
+      console.warn("error",error);
       console.error(error);
       
       // Check if it's an axios error first
@@ -114,9 +118,7 @@ export default function App(): JSX.Element {
     try {
       setLoading(true);
       await GoogleSignin.signOut();
-      await AsyncStorage.removeItem("refreshToken"); // Clear stored token
-      
-      // Dispatch the Redux action to clear user state
+      // Redux persist will automatically clear from AsyncStorage
       dispatch(logout());
       
     } catch (error: unknown) {
