@@ -57,8 +57,9 @@ const fetchRecipes = async () => {
   setLoading(true);
   setError(null);
   try {
+    console.warn(user.user)
     const response = await axios.get(
-      `${BACKEND_URL}/recipes/user/${user.user.id}`,
+      `${BACKEND_URL}/api/v1/users/${user.user.id}/recipes`,
       {
         headers: {
           Authorization: `Bearer ${user.accessToken}`,

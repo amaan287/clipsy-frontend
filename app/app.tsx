@@ -49,7 +49,7 @@ export default function App(): JSX.Element {
         console.warn("name",name);
         console.warn("photo",photo);
         const res = await axios.post(
-          `${BACKEND_URL}/auth/login`,
+          `${BACKEND_URL}/api/v1/auth/login`,
           {
             email:email,            
             name:name,

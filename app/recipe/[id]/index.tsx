@@ -59,7 +59,7 @@ export default function RecipePage() {
         async function fetchRecipe() {
             try {
                 setLoading(true);
-                const response = await axios.get(`${BACKEND_URL}/recipe/${id}`);
+                const response = await axios.get(`${BACKEND_URL}/api/v1/users/${id}/recipes`);
                 console.warn('Response:', response.data);
                 if (response.data.success) {
                     setRecipe(response.data.recipe_data);
